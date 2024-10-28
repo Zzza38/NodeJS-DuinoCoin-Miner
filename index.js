@@ -8,6 +8,19 @@ const ini = require('ini');
 const path = require("path");
 const CONFIG_FILE = path.join(__dirname, "config.ini");
 
+const getPool = async () => {
+    return new Promise((resolve, reject) => {
+        fetch("https://server.duinocoin.com/getPool")
+            .then(res => res.json())
+            .then(res => {
+                if(res.success == true) resolve(res);
+                else reject("Failed to fetch the pool");
+            }).catch(err => {
+                reject(err);
+            });
+    });
+};
+
 let user = "",
     processes = 0,
     hashlib = "",
@@ -16,7 +29,7 @@ let user = "",
 
 const loadConfig = async () => {
     return new Promise((resolve, reject) => {
-        if(fs.existsSync(CONFIG_FILE)) {
+        if (fs.existsSync(CONFIG_FILE)) {
             fs.readFile(CONFIG_FILE, 'utf-8', (err, data) => {
                 if (err) throw err;
                 config = ini.parse(data);
@@ -35,7 +48,7 @@ const loadConfig = async () => {
             config = configData;
 
             fs.writeFile(CONFIG_FILE, ini.stringify(configData), (err) => {
-                if(err) throw err;
+                if (err) throw err;
                 resolve(config);
             });
         };
@@ -176,8 +189,7 @@ if (cluster.isMaster) {
 
     socket.setEncoding("utf8");
     socket.setTimeout(5000);
- 
-    utils.getPool().then((data) => {
+    getPool().then((data) => {
         console.log(`[${workerData.workerId}] ` + "Connecting to pool: " + data.name);
         socket.connect(data.port, data.ip);
     }).catch((err) => {
@@ -193,11 +205,10 @@ if (cluster.isMaster) {
     });
 
     socket.on("error", (err) => {
-        if(err.message.code = "ETIMEDOUT")
-        {
+        if (err.message.code = "ETIMEDOUT") {
             console.log(`[${workerData.workerId}] ` + "Connection timed out");
             console.log(`[${workerData.workerId}] ` + "Restarting connection");
-            utils.getPool().then((data) => {
+            getPool().then((data) => {
                 console.log(`[${workerData.workerId}] ` + "Connecting to pool: " + data.name);
                 socket.connect(data.port, data.ip);
             }).catch((err) => {
